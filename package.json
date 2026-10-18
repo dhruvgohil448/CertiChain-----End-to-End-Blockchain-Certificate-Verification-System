@@ -1,0 +1,20 @@
+{
+  "name": "certichain",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Blockchain academic certificate verification prototype",
+  "scripts": {
+    "compile": "hardhat compile && node scripts/export-abi.js",
+    "test": "hardhat test",
+    "test:hash": "node --test frontend/src/lib/certificateHash.test.js frontend/src/lib/validation.test.js",
+    "node": "hardhat node",
+    "deploy": "hardhat run scripts/deploy.js --network localhost",
+    "sample": "hardhat run scripts/issue-sample.js --network localhost",
+    "export-abi": "node scripts/export-abi.js"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^6.1.2",
+    "dotenv": "^16.6.1",
+    "hardhat": "^2.29.1"
+  }
+}
