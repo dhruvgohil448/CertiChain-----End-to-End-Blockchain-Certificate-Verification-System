@@ -18,7 +18,7 @@ export default function Layout() {
               blocked until you switch. Public lookup still uses the local node.
             </p>
             <button type="button" className={btnSecondary} onClick={wallet.switchNetwork}>
-              Switch network
+              Switch to Hardhat
             </button>
           </div>
         </div>

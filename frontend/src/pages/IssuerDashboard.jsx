@@ -94,7 +94,7 @@ export default function IssuerDashboard() {
       {!wallet.installed && (
         <div className="mt-4">
           <Alert tone="warning">
-            This browser cannot use MetaMask, so issuing and revoking are unavailable here. Open {window.location.origin} in Chrome, Brave, or Edge and install the MetaMask extension if it is missing. Checking a certificate does not need a wallet.
+            This page cannot see MetaMask yet. Click the fox icon in the toolbar, allow access for this site, then click Connect Wallet. The issuer account is the imported address that starts with 0xf39F.
           </Alert>
         </div>
       )}

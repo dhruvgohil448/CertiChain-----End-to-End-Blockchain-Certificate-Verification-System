@@ -2,7 +2,7 @@ import { LoaderCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useWallet } from "../context/WalletContext";
-import { isContractConfigured, issueCertificate, parseContractError } from "../lib/blockchain";
+import { EXPECTED_CHAIN_ID, isContractConfigured, issueCertificate, parseContractError } from "../lib/blockchain";
 import { generateCertificateId, hashCertificate } from "../lib/certificateHash";
 import { sameAddress } from "../lib/format";
 import { emptyCertificate, sampleCertificate } from "../lib/sampleData";
@@ -57,19 +57,23 @@ export default function CertificateForm({ issuerAddress }) {
       setFormError("Deploy the contract before issuing. Run npm run deploy while the Hardhat node is running.");
       return;
     }
-    if (!wallet.installed) {
-      setFormError("Install MetaMask, then connect the issuer wallet.");
+    let connectedAccount = wallet.account;
+    let connectedChainId = wallet.chainId;
+    if (!connectedAccount) {
+      const connected = await wallet.connect();
+      connectedAccount = connected?.account || "";
+      connectedChainId = connected?.chainId ?? null;
+      if (!connectedAccount) {
+        setFormError("Click the MetaMask fox, allow this site, and connect the imported issuer account that starts with 0xf39F.");
+        return;
+      }
+    }
+    if (Number(connectedChainId) !== EXPECTED_CHAIN_ID) {
+      await wallet.switchNetwork();
+      setFormError("Approve the Hardhat Local network in MetaMask, then click Issue Certificate again.");
       return;
     }
-    if (!wallet.account) {
-      setFormError("Connect the authorized issuer wallet before issuing.");
-      return;
-    }
-    if (wallet.wrongNetwork) {
-      setFormError("Switch MetaMask to the local Hardhat network before issuing.");
-      return;
-    }
-    if (issuerAddress && !isIssuer) {
+    if (issuerAddress && !sameAddress(connectedAccount, issuerAddress)) {
       setFormError("This wallet is not the authorized issuer, so the contract will reject the transaction.");
       return;
     }

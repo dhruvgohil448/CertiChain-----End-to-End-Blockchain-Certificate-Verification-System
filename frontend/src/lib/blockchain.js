@@ -17,9 +17,52 @@ const ERROR_MESSAGES = {
 };
 
 let readProvider;
+let discoveredProvider = null;
+const providerListeners = new Set();
+
+function selectProvider(candidate, info) {
+  if (!candidate) return;
+  const name = info?.name || "";
+  const nextIsMetaMask = Boolean(candidate.isMetaMask) || /metamask/i.test(name);
+  const currentIsMetaMask = Boolean(discoveredProvider?.isMetaMask);
+  if (!discoveredProvider || (nextIsMetaMask && !currentIsMetaMask)) {
+    discoveredProvider = candidate;
+    providerListeners.forEach((listener) => listener(candidate));
+  }
+}
+
+export function getEthereumProvider() {
+  if (typeof window === "undefined") return null;
+  return discoveredProvider || window.ethereum || null;
+}
 
 export function hasEthereum() {
-  return typeof window !== "undefined" && Boolean(window.ethereum);
+  return Boolean(getEthereumProvider());
+}
+
+export function subscribeToEthereumProvider(listener) {
+  if (typeof window === "undefined") return () => {};
+  providerListeners.add(listener);
+
+  const onAnnounce = (event) => {
+    selectProvider(event.detail?.provider, event.detail?.info);
+  };
+  const onInitialized = () => {
+    if (window.ethereum) selectProvider(window.ethereum);
+  };
+
+  window.addEventListener("eip6963:announceProvider", onAnnounce);
+  window.addEventListener("ethereum#initialized", onInitialized);
+  window.dispatchEvent(new Event("eip6963:requestProvider"));
+  if (window.ethereum) selectProvider(window.ethereum);
+  const current = getEthereumProvider();
+  if (current) listener(current);
+
+  return () => {
+    providerListeners.delete(listener);
+    window.removeEventListener("eip6963:announceProvider", onAnnounce);
+    window.removeEventListener("ethereum#initialized", onInitialized);
+  };
 }
 
 export function isContractConfigured() {
@@ -43,10 +86,11 @@ export function getReadProvider() {
 }
 
 export function getBrowserProvider() {
-  if (!hasEthereum()) {
-    throw new Error("MetaMask is not installed in this browser.");
+  const ethereum = getEthereumProvider();
+  if (!ethereum) {
+    throw new Error("MetaMask is not available to this page. Click the fox icon and allow access for this site.");
   }
-  return new BrowserProvider(window.ethereum);
+  return new BrowserProvider(ethereum);
 }
 
 function getReadContract() {
@@ -135,18 +179,19 @@ export async function fetchRecentCertificates() {
 }
 
 export async function switchToExpectedNetwork() {
-  if (!hasEthereum()) {
-    throw new Error("MetaMask is not installed in this browser.");
+  const ethereum = getEthereumProvider();
+  if (!ethereum) {
+    throw new Error("MetaMask is not available to this page. Click the fox icon and allow access for this site.");
   }
   const chainIdHex = `0x${EXPECTED_CHAIN_ID.toString(16)}`;
   try {
-    await window.ethereum.request({
+    await ethereum.request({
       method: "wallet_switchEthereumChain",
       params: [{ chainId: chainIdHex }],
     });
   } catch (error) {
     if (error?.code !== 4902) throw error;
-    await window.ethereum.request({
+    await ethereum.request({
       method: "wallet_addEthereumChain",
       params: [
         {

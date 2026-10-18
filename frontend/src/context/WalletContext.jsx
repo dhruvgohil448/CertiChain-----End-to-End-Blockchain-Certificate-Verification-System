@@ -2,8 +2,9 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import {
   EXPECTED_CHAIN_ID,
   getBrowserProvider,
-  hasEthereum,
+  getEthereumProvider,
   parseContractError,
+  subscribeToEthereumProvider,
   switchToExpectedNetwork,
 } from "../lib/blockchain";
 
@@ -14,29 +15,15 @@ export function WalletProvider({ children }) {
   const [chainId, setChainId] = useState(null);
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState("");
-  const [installed, setInstalled] = useState(() => hasEthereum());
+  const [installed, setInstalled] = useState(false);
 
   useEffect(() => {
-    if (hasEthereum()) {
-      setInstalled(true);
-      return undefined;
-    }
-
-    const markInstalled = () => {
-      if (hasEthereum()) setInstalled(true);
-    };
-
-    window.addEventListener("ethereum#initialized", markInstalled, { once: true });
-    const timer = window.setTimeout(markInstalled, 1000);
-    return () => {
-      window.removeEventListener("ethereum#initialized", markInstalled);
-      window.clearTimeout(timer);
-    };
+    return subscribeToEthereumProvider(() => setInstalled(true));
   }, []);
 
   useEffect(() => {
-    if (!installed) return undefined;
-    const ethereum = window.ethereum;
+    const ethereum = getEthereumProvider();
+    if (!ethereum) return undefined;
 
     getBrowserProvider()
       .send("eth_chainId", [])
@@ -55,19 +42,24 @@ export function WalletProvider({ children }) {
 
   const connect = useCallback(async () => {
     setError("");
-    if (!hasEthereum()) {
-      setError("MetaMask is not available in this browser. Open the site in Chrome, Brave, or Edge with the MetaMask extension installed.");
-      return;
+    if (!getEthereumProvider()) {
+      setError("This page cannot see MetaMask yet. Click the fox icon in the toolbar and allow access for 127.0.0.1, then click Connect Wallet again.");
+      return null;
     }
+    setInstalled(true);
     setConnecting(true);
     try {
       const provider = getBrowserProvider();
       const accounts = await provider.send("eth_requestAccounts", []);
       const network = await provider.getNetwork();
-      setAccount(accounts[0] || "");
-      setChainId(Number(network.chainId));
+      const nextAccount = accounts[0] || "";
+      const nextChainId = Number(network.chainId);
+      setAccount(nextAccount);
+      setChainId(nextChainId);
+      return { account: nextAccount, chainId: nextChainId };
     } catch (connectError) {
       setError(parseContractError(connectError));
+      return null;
     } finally {
       setConnecting(false);
     }

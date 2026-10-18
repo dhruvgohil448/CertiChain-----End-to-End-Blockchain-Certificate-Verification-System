@@ -19,13 +19,15 @@ export default function WalletConnect() {
 
   return (
     <div className="flex items-center gap-2">
-      <span
-        className={`hidden rounded-full px-2.5 py-1 text-xs font-semibold sm:inline ${
-          wallet.wrongNetwork ? "bg-amber-100 text-amber-950" : "bg-teal-50 text-teal-800"
-        }`}
-      >
-        {wallet.wrongNetwork ? "Wrong network" : network}
-      </span>
+      {wallet.wrongNetwork ? (
+        <button type="button" className={`${btnSecondary} px-2.5 py-1.5 text-xs`} onClick={wallet.switchNetwork}>
+          Switch to Hardhat
+        </button>
+      ) : (
+        <span className="hidden rounded-full bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-800 sm:inline">
+          {network}
+        </span>
+      )}
       <span title={wallet.account} className="rounded-lg bg-slate-100 px-2.5 py-1.5 font-mono text-xs text-navy-900">
         {shortenHex(wallet.account)}
       </span>
